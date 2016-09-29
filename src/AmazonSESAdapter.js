@@ -5,6 +5,8 @@ import co from 'co';
 import fs from 'fs';
 import path from 'path';
 
+const yearInMilliseconds = 1000 * 60 * 60 * 24 * 365.25;
+
 /**
  * MailAdapter implementation used by the Parse Server to send
  * password reset and email verification emails though AmazonSES
@@ -161,6 +163,10 @@ class AmazonSESAdapter extends MailAdapter {
     }).then(payload => {
       return new Promise((resolve, reject) => {
         this.ses.send(payload, (error, data) => {
+
+            console.log("Error: " + error);
+            console.log("Data: " + data);
+
           if (error) reject(error);
           resolve(data);
         });
@@ -196,13 +202,25 @@ class AmazonSESAdapter extends MailAdapter {
    * @returns {promise}
    */
   sendVerificationEmail({link, appName, user}) {
-    return this._sendMail({
-      link,
-      appName,
-      user,
-      templateConfig: this.templates.verificationEmail
-    });
+      var age = 0;
+
+      if (user.get("birthDate") != undefined) {
+          var birthday = user.get("birthDate");
+
+          var ageDiff = Date.now() - birthday.getTime();
+          age = ageDiff / yearInMilliseconds;
+      }
+
+      if (age < 13) {
+          return this._sendMail({
+              link,
+              appName,
+              user,
+              templateConfig: this.templates.verificationEmail
+          });
+      }
   }
+
 
   /**
    * _sendMail wrapper to send general purpose emails
